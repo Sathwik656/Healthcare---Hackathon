@@ -13,12 +13,14 @@ const resources = {
       "book_appointment": "Book Appointment",
       "pending_requests": "Pending Requests",
       "manage_doctors": "Manage Doctors",
+      "manage_health_centers": "Manage Health Centers",
       "ai_assistant": "AI Assistant",
       "symptoms_placeholder": "E.g., I have skin allergy...",
       "find_doctor": "Find Doctor",
       "notifications": "Notifications"
     }
   },
+
   hi: {
     translation: {
       "welcome": "स्वागत है",
@@ -30,12 +32,14 @@ const resources = {
       "book_appointment": "अपॉइंटमेंट बुक करें",
       "pending_requests": "लंबित अनुरोध",
       "manage_doctors": "डॉक्टरों का प्रबंधन करें",
+      "manage_health_centers": "स्वास्थ्य केंद्रों का प्रबंधन करें",
       "ai_assistant": "एआई सहायक",
       "symptoms_placeholder": "उदा., मुझे त्वचा की एलर्जी है...",
       "find_doctor": "डॉक्टर खोजें",
       "notifications": "सूचनाएं"
     }
   },
+
   kn: {
     translation: {
       "welcome": "ಸ್ವಾಗತ",
@@ -47,6 +51,7 @@ const resources = {
       "book_appointment": "ನೇಮಕಾತಿ ಕಾಯ್ದಿರಿಸಿ",
       "pending_requests": "ಬಾಕಿ ಇರುವ ವಿನಂತಿಗಳು",
       "manage_doctors": "ವೈದ್ಯರನ್ನು ನಿರ್ವಹಿಸಿ",
+      "manage_health_centers": "ಆರೋಗ್ಯ ಕೇಂದ್ರಗಳನ್ನು ನಿರ್ವಹಿಸಿ",
       "ai_assistant": "ಎಐ ಸಹಾಯಕ",
       "symptoms_placeholder": "ಉದಾ., ನನಗೆ ಚರ್ಮದ ಅಲರ್ಜಿ ಇದೆ...",
       "find_doctor": "ವೈದ್ಯರನ್ನು ಹುಡುಕಿ",

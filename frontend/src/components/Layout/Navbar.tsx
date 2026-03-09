@@ -29,6 +29,7 @@ const Navbar = () => {
   const adminLinks = [
     { name: t('dashboard'), path: '/admin/dashboard' },
     { name: t('manage_doctors'), path: '/admin/doctors' },
+    { name: t('manage_health_centers'), path: '/admin/health-centers' },
   ];
 
   const links = user?.role === 'patient' ? patientLinks 

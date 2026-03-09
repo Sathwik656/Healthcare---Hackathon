@@ -208,6 +208,58 @@ async function declineAppointment(req, res, next) {
   }
 }
 
+// ─── PATCH /appointments/:appointment_id ──────────────────────────────────────
+async function rescheduleAppointment(req, res, next) {
+  try {
+    const { appointment_id } = req.params;
+    const patientId = req.user.user_id;
+    const { date, time } = req.body;
+
+    if (!date || !time) {
+      return error(res, 'date and time are required.', 400);
+    }
+
+    const existing = await fetchAppointment(appointment_id);
+    if (!existing) return error(res, 'Appointment not found.', 404);
+    if (existing.patient_id !== patientId) return error(res, 'Not your appointment.', 403);
+    if (['cancelled', 'declined', 'completed'].includes(existing.status)) {
+      return error(res, `Cannot reschedule a ${existing.status} appointment.`, 400);
+    }
+
+    // Verify the new slot exists in doctor availability
+    const dateObj   = new Date(date);
+    const dayOfWeek = dateObj.getDay();
+    const availCheck = await pool.query(
+      `SELECT availability_id FROM doctor_availability
+       WHERE  doctor_id = $1 AND day_of_week = $2
+         AND  start_time <= $3::time AND end_time > $3::time`,
+      [existing.doctor_id, dayOfWeek, time]
+    );
+    if (!availCheck.rows.length) {
+      return error(res, 'Doctor is not available at that time.', 409);
+    }
+
+    await pool.query(
+      `UPDATE appointments
+       SET appointment_date = $1,
+           appointment_time = $2,
+           status           = 'pending',
+           updated_at       = NOW()
+       WHERE appointment_id = $3`,
+      [date, time, appointment_id]
+    );
+
+    const updated = await fetchAppointment(appointment_id);
+    await notif.appointmentCreated(existing.doctor_id, updated);
+    return success(res, { appointment: updated }, 'Appointment rescheduled.');
+  } catch (err) {
+    if (err.code === '23505') {
+      return error(res, 'That time slot is already booked. Please choose another.', 409);
+    }
+    next(err);
+  }
+}
+
 module.exports = {
   createAppointment,
   getPatientAppointments,
@@ -215,4 +267,5 @@ module.exports = {
   cancelAppointment,
   acceptAppointment,
   declineAppointment,
+  rescheduleAppointment
 };

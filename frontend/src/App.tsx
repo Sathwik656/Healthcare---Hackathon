@@ -29,6 +29,7 @@ import PreviousAppointments from './pages/Doctor/PreviousAppointments';
 // Admin Pages
 import AdminDashboard from './pages/Admin/Dashboard';
 import ManageDoctors from './pages/Admin/ManageDoctors';
+import ManageHealthCenters from './pages/Admin/ManageHealthCenters';
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles: string[] }) => {
   const { isAuthenticated, user } = useAuthStore();
@@ -75,6 +76,7 @@ export default function App() {
           {/* Admin Routes */}
           <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
           <Route path="/admin/doctors" element={<ProtectedRoute allowedRoles={['admin']}><ManageDoctors /></ProtectedRoute>} />
+          <Route path="/admin/health-centers" element={<ProtectedRoute allowedRoles={['admin']}><ManageHealthCenters /></ProtectedRoute>} />
         </Route>
 
         {/* Catch all */}

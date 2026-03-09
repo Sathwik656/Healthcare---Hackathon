@@ -1,99 +1,209 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CheckCircle, XCircle, Calendar, Clock, User } from 'lucide-react';
+import { CheckCircle, XCircle, Calendar, Clock, User, Loader2, AlertCircle, MapPin } from 'lucide-react';
+import api from '@/src/services/api';
 
+interface Appointment {
+  appointment_id: string;
+  patient_id: string;
+  patient_name: string;
+  appointment_date: string;
+  appointment_time: string;
+  duration_minutes: number;
+  reason: string | null;
+  status: string;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const formatDate = (iso: string) =>
+  new Date(iso).toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+  });
+
+const formatTime = (t: string) => {
+  const [h, m] = t.replace(/\..*/, '').split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  return `${(h % 12) || 12}:${String(m).padStart(2, '0')} ${ampm}`;
+};
+
+const initials = (name: string) =>
+  name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+
+// ── Component ─────────────────────────────────────────────────────────────────
 const DoctorRequests = () => {
   const { t } = useTranslation();
 
-  const [requests, setRequests] = useState([
-    { id: 1, patient: 'Alice Williams', date: '2023-11-01', time: '09:00 AM', reason: 'Annual Checkup' },
-    { id: 2, patient: 'David Miller', date: '2023-11-02', time: '10:30 AM', reason: 'Fever and Cough' },
-    { id: 3, patient: 'Sarah Davis', date: '2023-11-02', time: '02:00 PM', reason: 'Follow-up' },
-  ]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleAccept = (id: number) => {
-    setRequests(requests.filter(req => req.id !== id));
-    // Mock API call to accept
+  // Per-card action loading state
+  const [acting, setActing] = useState<Record<string, 'accepting' | 'declining' | null>>({});
+
+  // ── Fetch pending ───────────────────────────────────────────────────────
+  const fetchRequests = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await api.get('/appointments/doctor?status=pending');
+      setAppointments(res.data.data.appointments || []);
+    } catch {
+      setError('Failed to load appointment requests.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchRequests(); }, [fetchRequests]);
+
+  // ── Accept ──────────────────────────────────────────────────────────────
+  const handleAccept = async (id: string) => {
+    setActing(a => ({ ...a, [id]: 'accepting' }));
+    try {
+      await api.put(`/appointments/${id}/accept`);
+      setAppointments(prev => prev.filter(a => a.appointment_id !== id));
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to accept.');
+    } finally {
+      setActing(a => ({ ...a, [id]: null }));
+    }
   };
 
-  const handleDecline = (id: number) => {
-    setRequests(requests.filter(req => req.id !== id));
-    // Mock API call to decline
+  // ── Decline ─────────────────────────────────────────────────────────────
+  const handleDecline = async (id: string) => {
+    setActing(a => ({ ...a, [id]: 'declining' }));
+    try {
+      await api.put(`/appointments/${id}/decline`);
+      setAppointments(prev => prev.filter(a => a.appointment_id !== id));
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to decline.');
+    } finally {
+      setActing(a => ({ ...a, [id]: null }));
+    }
   };
 
+  // ── Render ──────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900">{t('pending_requests')}</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-900">{t('pending_requests')}</h1>
+        {appointments.length > 0 && (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
+            {appointments.length} pending
+          </span>
+        )}
+      </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+
+        {/* Header */}
         <div className="px-6 py-5 border-b border-slate-200 bg-slate-50">
-          <h2 className="text-lg font-semibold text-slate-900 flex items-center">
-            <Clock className="w-5 h-5 mr-2 text-amber-600" />
+          <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-amber-500" />
             Appointment Requests
           </h2>
         </div>
-        
-        <div className="divide-y divide-slate-200">
-          {requests.map((req) => (
-            <div key={req.id} className="p-6 hover:bg-slate-50 transition-colors">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-start">
-                  <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold text-lg flex-shrink-0">
-                    {req.patient.charAt(0)}
-                  </div>
-                  <div className="ml-4">
-                    <h3 className="text-lg font-semibold text-slate-900">{req.patient}</h3>
-                    <p className="text-sm text-slate-500 mt-1 flex items-center">
-                      <User className="w-4 h-4 mr-1.5 text-slate-400" />
-                      Reason: {req.reason}
-                    </p>
-                  </div>
-                </div>
 
-                <div className="flex flex-col md:items-end gap-3">
-                  <div className="flex items-center gap-4 text-sm font-medium text-slate-700 bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-sm">
-                    <div className="flex items-center">
-                      <Calendar className="w-4 h-4 mr-1.5 text-green-500" />
-                      {req.date}
+        {/* Loading */}
+        {loading && (
+          <div className="flex items-center justify-center py-14 gap-3 text-slate-400">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span className="text-sm">Loading requests...</span>
+          </div>
+        )}
+
+        {/* Error */}
+        {error && (
+          <div className="m-6 flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />{error}
+          </div>
+        )}
+
+        {/* List */}
+        {!loading && !error && (
+          <div className="divide-y divide-slate-100">
+            {appointments.map(req => {
+              const isActing = !!acting[req.appointment_id];
+              return (
+                <div key={req.appointment_id}
+                  className="p-6 hover:bg-slate-50 transition-colors">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+
+                    {/* Patient info */}
+                    <div className="flex items-start gap-4">
+                      <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm flex-shrink-0">
+                        {initials(req.patient_name)}
+                      </div>
+                      <div>
+                        <h3 className="text-base font-semibold text-slate-900">{req.patient_name}</h3>
+                        {req.reason ? (
+                          <p className="text-sm text-slate-500 mt-0.5 flex items-center gap-1.5">
+                            <User className="w-3.5 h-3.5 text-slate-400" />
+                            {req.reason}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-slate-400 mt-0.5 italic">No reason provided</p>
+                        )}
+                        <p className="text-xs text-slate-400 mt-1">
+                          {req.duration_minutes} min session
+                        </p>
+                      </div>
                     </div>
-                    <div className="w-px h-4 bg-slate-300"></div>
-                    <div className="flex items-center">
-                      <Clock className="w-4 h-4 mr-1.5 text-green-500" />
-                      {req.time}
+
+                    {/* Date/time + actions */}
+                    <div className="flex flex-col md:items-end gap-3">
+                      {/* Date & time chip */}
+                      <div className="flex items-center gap-3 text-sm font-medium text-slate-700 bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-sm">
+                        <span className="flex items-center gap-1.5">
+                          <Calendar className="w-4 h-4 text-green-500" />
+                          {formatDate(req.appointment_date)}
+                        </span>
+                        <span className="w-px h-4 bg-slate-200 block" />
+                        <span className="flex items-center gap-1.5">
+                          <Clock className="w-4 h-4 text-green-500" />
+                          {formatTime(req.appointment_time)}
+                        </span>
+                      </div>
+
+                      {/* Accept / Decline */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          disabled={isActing}
+                          onClick={() => handleAccept(req.appointment_id)}
+                          className="inline-flex items-center px-4 py-1.5 text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 transition-colors shadow-sm"
+                        >
+                          {acting[req.appointment_id] === 'accepting'
+                            ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Accepting...</>
+                            : <><CheckCircle className="w-3.5 h-3.5 mr-1.5" />Accept</>}
+                        </button>
+                        <button
+                          disabled={isActing}
+                          onClick={() => handleDecline(req.appointment_id)}
+                          className="inline-flex items-center px-4 py-1.5 text-sm font-medium rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-red-50 hover:text-red-600 hover:border-red-300 disabled:opacity-50 transition-colors shadow-sm"
+                        >
+                          {acting[req.appointment_id] === 'declining'
+                            ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Declining...</>
+                            : <><XCircle className="w-3.5 h-3.5 mr-1.5" />Decline</>}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 mt-2 md:mt-0">
-                    <button
-                      onClick={() => handleAccept(req.id)}
-                      className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors shadow-sm"
-                    >
-                      <CheckCircle className="w-4 h-4 mr-1.5" />
-                      Accept
-                    </button>
-                    <button
-                      onClick={() => handleDecline(req.id)}
-                      className="inline-flex items-center px-3 py-1.5 border border-slate-300 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors shadow-sm hover:text-red-600 hover:border-red-300"
-                    >
-                      <XCircle className="w-4 h-4 mr-1.5" />
-                      Decline
-                    </button>
                   </div>
                 </div>
+              );
+            })}
+
+            {/* Empty state */}
+            {appointments.length === 0 && (
+              <div className="text-center py-14">
+                <div className="h-14 w-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="h-7 w-7 text-green-500" />
+                </div>
+                <p className="text-sm font-medium text-slate-800">All caught up!</p>
+                <p className="text-xs text-slate-400 mt-1">No pending appointment requests.</p>
               </div>
-            </div>
-          ))}
-
-          {requests.length === 0 && (
-            <div className="text-center py-12">
-              <CheckCircle className="mx-auto h-12 w-12 text-green-400" />
-              <h3 className="mt-2 text-sm font-medium text-slate-900">All caught up!</h3>
-              <p className="mt-1 text-sm text-slate-500">
-                You have no pending appointment requests.
-              </p>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
