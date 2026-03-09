@@ -1,0 +1,5 @@
+{
+  "name": "Healthcare Appointment Booking System",
+  "description": "A modern healthcare appointment booking web application where patients can book appointments with doctors online, doctors can manage appointment requests, and admins can manage doctors.",
+  "requestFramePermissions": []
+}
