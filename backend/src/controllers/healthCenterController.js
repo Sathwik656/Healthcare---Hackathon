@@ -1,62 +1,104 @@
-const pool               = require('../config/db');
+const pool = require('../config/db');
 const { success, error } = require('../utils/response');
 
-// ─── GET /health-centers ──────────────────────────────────────────────────────
-async function getAllHealthCenters(req, res, next) {
+// GET all health centers
+async function getHealthCenters(req, res, next) {
   try {
-    const { search } = req.query;
-    let query = `
-      SELECT hc.*, COUNT(dp.doctor_id) AS doctor_count
-      FROM   health_centers hc
-      LEFT JOIN doctor_profiles dp ON dp.health_center_id = hc.health_center_id AND dp.status = 'active'
-    `;
-    const params = [];
-    if (search) {
-      params.push(`%${search}%`);
-      query += ` WHERE hc.name ILIKE $1 OR hc.address ILIKE $1`;
-    }
-    query += ` GROUP BY hc.health_center_id ORDER BY hc.name ASC`;
+    const { rows } = await pool.query(
+      `SELECT * FROM health_centers
+       ORDER BY name ASC`
+    );
 
-    const { rows } = await pool.query(query, params);
     return success(res, { health_centers: rows });
   } catch (err) {
     next(err);
   }
 }
 
-// ─── GET /health-centers/:health_center_id ────────────────────────────────────
-async function getHealthCenterById(req, res, next) {
+// CREATE
+async function createHealthCenter(req, res, next) {
   try {
-    const { health_center_id } = req.params;
+    const { name, address, phone, email } = req.body;
 
-    const hcRes = await pool.query(
-      `SELECT * FROM health_centers WHERE health_center_id = $1`,
-      [health_center_id]
-    );
-    if (!hcRes.rows.length) return error(res, 'Health center not found.', 404);
+    if (!name) {
+      return error(res, 'Health center name required', 400);
+    }
 
-    // Also return active doctors at this center
-    const doctorRes = await pool.query(
-      `SELECT u.user_id, u.name, dp.experience_years, dp.bio,
-              s.specialty_name,
-              ROUND(AVG(dr.rating),1) AS avg_rating
-       FROM   doctor_profiles dp
-       JOIN   users u       ON u.user_id      = dp.doctor_id
-       JOIN   specialties s ON s.specialty_id = dp.specialty_id
-       LEFT JOIN doctor_reviews dr ON dr.doctor_id = dp.doctor_id
-       WHERE  dp.health_center_id = $1 AND dp.status = 'active'
-       GROUP  BY u.user_id, dp.doctor_id, s.specialty_id
-       ORDER  BY u.name ASC`,
-      [health_center_id]
+    const { rows } = await pool.query(
+      `INSERT INTO health_centers (name, address, phone, email)
+       VALUES ($1,$2,$3,$4)
+       RETURNING *`,
+      [name, address || null, phone || null, email || null]
     );
 
-    return success(res, {
-      health_center: hcRes.rows[0],
-      doctors: doctorRes.rows,
-    });
+    return success(res, { health_center: rows[0] }, 'Health center created', 201);
   } catch (err) {
     next(err);
   }
 }
 
-module.exports = { getAllHealthCenters, getHealthCenterById };
+// UPDATE
+async function updateHealthCenter(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { name, address, phone, email } = req.body;
+
+    const { rows } = await pool.query(
+      `UPDATE health_centers
+       SET name=$1,
+           address=$2,
+           phone=$3,
+           email=$4
+       WHERE health_center_id=$5
+       RETURNING *`,
+      [name, address, phone, email, id]
+    );
+
+    if (!rows.length) {
+      return error(res, 'Health center not found', 404);
+    }
+
+    return success(res, { health_center: rows[0] }, 'Health center updated');
+  } catch (err) {
+    next(err);
+  }
+}
+
+// DELETE
+async function deleteHealthCenter(req, res, next) {
+  try {
+    const { id } = req.params;
+
+    const check = await pool.query(
+      `SELECT doctor_id FROM doctor_profiles
+       WHERE health_center_id = $1
+       LIMIT 1`,
+      [id]
+    );
+
+    if (check.rows.length) {
+      return error(res, 'Cannot delete. Doctors are assigned to this health center.', 400);
+    }
+
+    const result = await pool.query(
+      `DELETE FROM health_centers
+       WHERE health_center_id=$1`,
+      [id]
+    );
+
+    if (!result.rowCount) {
+      return error(res, 'Health center not found', 404);
+    }
+
+    return success(res, {}, 'Health center deleted');
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = {
+  getHealthCenters,
+  createHealthCenter,
+  updateHealthCenter,
+  deleteHealthCenter
+};

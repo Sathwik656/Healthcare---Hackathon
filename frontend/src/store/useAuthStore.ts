@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import api from '../services/api';
 
 export type Role = 'patient' | 'doctor' | 'admin' | null;
 
@@ -13,19 +14,20 @@ interface User {
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
-  login: (user: User, token: string) => void;
+  setUser: (user: User) => void;
   logout: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user: null, // Initially null
+  user: null,
   isAuthenticated: false,
-  login: (user, token) => {
-    localStorage.setItem('token', token);
+
+  setUser: (user) => {
     set({ user, isAuthenticated: true });
   },
+
   logout: () => {
-    localStorage.removeItem('token');
     set({ user: null, isAuthenticated: false });
+    api.post('logout');
   },
 }));

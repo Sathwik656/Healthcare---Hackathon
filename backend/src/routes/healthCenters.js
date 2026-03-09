@@ -1,7 +1,11 @@
 const router = require('express').Router();
-const { getAllHealthCenters, getHealthCenterById } = require('../controllers/healthCenterController');
+const ctrl = require('../controllers/healthCenterController');
+const { authenticate, authorise } = require('../middleware/auth');
 
-router.get('/',                      getAllHealthCenters);    // public
-router.get('/:health_center_id',     getHealthCenterById);   // public
+router.get('/', ctrl.getHealthCenters);
+
+router.post('/', authenticate, authorise('admin'), ctrl.createHealthCenter);
+router.put('/:id', authenticate, authorise('admin'), ctrl.updateHealthCenter);
+router.delete('/:id', authenticate, authorise('admin'), ctrl.deleteHealthCenter);
 
 module.exports = router;
