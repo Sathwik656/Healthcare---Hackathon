@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { NavLink, Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Bell, Globe, Activity, LogOut } from 'lucide-react';
+import NotificationBell from '../Notification/NotificationBell';
 
 const Navbar = () => {
   const { t, i18n } = useTranslation();
@@ -79,7 +80,7 @@ const Navbar = () => {
 
         {/* Notifications */}
         <button className="relative text-slate-600 hover:text-green-600 transition-colors">
-          <Bell className="w-6 h-6" />
+          <NotificationBell />
           <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
         </button>
 
