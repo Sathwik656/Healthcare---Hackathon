@@ -33,7 +33,7 @@ function initSocket(io) {
     // Join personal room so server can push to this user directly
     const room = `user_${user_id}`;
     socket.join(room);
-
+      console.log(`✅ [WS] Rooms for ${name}:`, Array.from(socket.rooms));
     console.log(`🔌 [WS] ${name} (${user_id}) connected → joined room ${room}`);
 
     // ── Client-initiated: mark notification read via WS ──────────────────────

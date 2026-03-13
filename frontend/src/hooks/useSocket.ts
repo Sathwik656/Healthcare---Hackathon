@@ -1,10 +1,11 @@
 import { io, Socket } from "socket.io-client";
 
 let socketInstance: Socket | null = null;
+const SOCKET_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export const getSocket = (): Socket => {
   if (!socketInstance) {
-    socketInstance = io("/", {
+    socketInstance = io(SOCKET_URL, {
       // same origin via Vite proxy
       withCredentials: true, // sends httpOnly cookie
       transports: ["websocket", "polling"],

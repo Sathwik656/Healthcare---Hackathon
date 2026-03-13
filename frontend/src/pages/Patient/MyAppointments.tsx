@@ -172,7 +172,7 @@ const MyAppointments = () => {
     if (!cancelId) return;
     setCancelling(true);
     try {
-      await api.patch(`/appointments/${cancelId}/cancel`);
+      await api.put(`/appointments/${cancelId}/cancel`);
       setCancelId(null);
       fetchAppointments();
     } catch (err: any) {

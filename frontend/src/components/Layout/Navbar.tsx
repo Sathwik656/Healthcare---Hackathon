@@ -24,6 +24,7 @@ const Navbar = () => {
     { name: t('dashboard'), path: '/doctor/dashboard' },
     { name: t('pending_requests'), path: '/doctor/requests' },
     { name: 'Previous Appointments', path: '/doctor/previous-appointments' },
+    { name: 'My Availability', path: '/doctor/availability' },
     { name: t('profile'), path: '/doctor/profile' },
   ];
 
